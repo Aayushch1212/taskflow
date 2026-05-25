@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Team Task Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root {
+  --bg:       #0a0a0f;
+  --surface:  #111118;
+  --panel:    #16161f;
+  --border:   #1e1e2e;
+  --border2:  #2a2a3f;
+  --text:     #e8e8f0;
+  --muted:    #6b6b8a;
+  --accent:   #7c6aff;
+  --accent2:  #a78bfa;
+  --green:    #22d3a5;
+  --amber:    #f59e0b;
+  --red:      #f43f5e;
+  --blue:     #38bdf8;
+  --r:        10px;
+  --shadow:   0 8px 32px rgba(0,0,0,.6);
+  --font:     'Inter', sans-serif;
+  --display:  'Syne', sans-serif;
+  --mono:     'DM Mono', monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;overflow:hidden}
+a{color:var(--accent);text-decoration:none}
+input,textarea,select{font:inherit;background:var(--panel);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:9px 12px;width:100%;outline:none;transition:border-color .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+button{font:inherit;cursor:pointer;border:none;border-radius:6px;padding:9px 18px;transition:all .15s}
+select option{background:var(--panel)}
+textarea{resize:vertical;min-height:80px}
+h1,h2,h3,h4{font-family:var(--display);font-weight:700;letter-spacing:-.02em}
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+#app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr;height:100vh}
+#topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+#sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:4px}
+#main{overflow-y:auto;padding:28px 32px;background:var(--bg)}
+/* ── Topbar ─────────────────────────────────────────────────────────────── */
+.logo{font-family:var(--display);font-size:18px;font-weight:800;color:var(--accent);letter-spacing:-.04em;margin-right:auto}
+.logo span{color:var(--text);opacity:.5}
+.topbar-user{display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 12px;border-radius:8px;border:1px solid var(--border)}
+.topbar-user:hover{border-color:var(--border2);background:var(--panel)}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:13px;flex-shrink:0}
+.badge{background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;font-family:var(--mono)}
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.nav-section{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;padding:12px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;user-select:none}
+.nav-item:hover{background:var(--panel);color:var(--text)}
+.nav-item.active{background:rgba(124,106,255,.15);color:var(--accent2)}
+.nav-item .icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.nav-item .count{margin-left:auto;background:var(--border2);font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:10px;color:var(--muted)}
+.nav-add{background:rgba(124,106,255,.1);border:1px dashed var(--accent);color:var(--accent);width:100%;margin-top:4px}
+.nav-add:hover{background:rgba(124,106,255,.2)}
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn{font-weight:500;font-size:13px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(244,63,94,.2)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-icon{padding:6px;background:transparent;color:var(--muted);border-radius:6px}
+.btn-icon:hover{background:var(--panel);color:var(--text)}
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.card-sm{padding:14px}
+/* ── Stats Grid ─────────────────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.blue::before{background:var(--blue)}
+.stat-card.green::before{background:var(--green)}
+.stat-card.amber::before{background:var(--amber)}
+.stat-card.red::before{background:var(--red)}
+.stat-card.purple::before{background:var(--accent)}
+.stat-value{font-family:var(--display);font-size:32px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-label{font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+/* ── Task Cards ─────────────────────────────────────────────────────────── */
+.task-grid{display:flex;flex-direction:column;gap:8px}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:flex-start;gap:12px}
+.task-card:hover{border-color:var(--border2);transform:translateX(2px)}
+.task-card.overdue{border-left:3px solid var(--red)}
+.task-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+/* ── Priority & Status Badges ───────────────────────────────────────────── */
+.priority,.status-badge{font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.priority.low{background:rgba(107,107,138,.15);color:var(--muted)}
+.priority.medium{background:rgba(56,189,248,.1);color:var(--blue)}
+.priority.high{background:rgba(245,158,11,.1);color:var(--amber)}
+.priority.urgent{background:rgba(244,63,94,.12);color:var(--red)}
+.status-badge.todo{background:rgba(107,107,138,.15);color:var(--muted)}
+.status-badge.in_progress{background:rgba(56,189,248,.1);color:var(--blue)}
+.status-badge.review{background:rgba(245,158,11,.1);color:var(--amber)}
+.status-badge.done{background:rgba(34,211,165,.1);color:var(--green)}
+/* ── Kanban Board ───────────────────────────────────────────────────────── */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.kanban-col-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-family:var(--display);font-size:13px;font-weight:700}
+.kanban-col-header .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kanban-tasks{display:flex;flex-direction:column;gap:8px;min-height:60px}
+.kanban-task{background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:12px;cursor:pointer;transition:all .15s}
+.kanban-task:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,106,255,.1)}
+.kanban-task-title{font-size:13px;font-weight:500;margin-bottom:8px;line-height:1.4}
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .15s ease}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);animation:slideUp .2s ease}
+.modal-wide{max-width:720px}
+.modal-header{padding:22px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:0 24px 22px;display:flex;gap:10px;justify-content:flex-end}
+.modal-title{font-family:var(--display);font-size:20px;font-weight:700}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-error{color:var(--red);font-size:12px;margin-top:5px}
+/* ── Auth Page ───────────────────────────────────────────────────────────── */
+#auth-page{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999}
+.auth-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:40px;width:420px;box-shadow:var(--shadow)}
+.auth-logo{font-family:var(--display);font-size:28px;font-weight:800;color:var(--accent);margin-bottom:8px;letter-spacing:-.04em}
+.auth-sub{color:var(--muted);font-size:13px;margin-bottom:28px}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px}
+.auth-tab{padding:8px 20px;cursor:pointer;font-family:var(--display);font-weight:600;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.auth-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.page-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.page-title{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.03em}
+.page-actions{margin-left:auto;display:flex;gap:8px}
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:12px;display:block;opacity:.4}
+.empty-title{font-family:var(--display);font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+/* ── Project cards ───────────────────────────────────────────────────────── */
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.project-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;cursor:pointer;transition:all .2s;position:relative}
+.project-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,106,255,.1)}
+.project-card-name{font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:6px}
+.project-card-desc{color:var(--muted);font-size:12px;margin-bottom:16px;line-height:1.5;min-height:36px}
+.project-progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:12px}
+.project-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .3s}
+.project-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono)}
+/* ── Members list ───────────────────────────────────────────────────────── */
+.member-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.member-row:last-child{border-bottom:none}
+/* ── Activity log ───────────────────────────────────────────────────────── */
+.activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:6px;flex-shrink:0}
+.activity-time{color:var(--muted);font-family:var(--mono);font-size:10px;white-space:nowrap}
+/* ── Comment ─────────────────────────────────────────────────────────────── */
+.comment{display:flex;gap:10px;margin-bottom:12px}
+.comment-body{background:var(--panel);border-radius:8px;padding:10px 14px;flex:1}
+.comment-meta{display:flex;gap:8px;align-items:center;margin-bottom:4px}
+.comment-author{font-weight:600;font-size:12px}
+.comment-time{font-family:var(--mono);font-size:10px;color:var(--muted)}
+/* ── Filter bar ─────────────────────────────────────────────────────────── */
+.filter-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.filter-bar input{max-width:240px}
+.filter-bar select{width:auto;padding:8px 12px}
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:12px 18px;font-size:13px;box-shadow:var(--shadow);animation:slideUp .2s ease;min-width:240px}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--blue)}
+/* ── Tab nav ─────────────────────────────────────────────────────────────── */
+.tab-nav{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;gap:4px}
+.tab-btn{padding:8px 16px;cursor:pointer;font-weight:500;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;background:none;border-top:none;border-left:none;border-right:none;border-radius:0;transition:all .15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover{color:var(--text)}
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── Role badge ─────────────────────────────────────────────────────────── */
+.role-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px}
+.role-badge.admin{background:rgba(124,106,255,.15);color:var(--accent2)}
+.role-badge.member{background:var(--border);color:var(--muted)}
+/* ── Tooltip ─────────────────────────────────────────────────────────────── */
+[title]{position:relative}
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media(max-width:768px){
+  #app{grid-template-columns:1fr;grid-template-rows:56px 1fr}
+  #sidebar{display:none}
+  #main{padding:16px}
+  .kanban{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH PAGE -->
+<div id="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">TaskFlow</div>
+    <div class="auth-sub">Team collaboration, simplified.</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Create Account</div>
+    </div>
+    <div id="auth-form"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <!-- Topbar -->
+  <header id="topbar">
+    <div class="logo">Task<span>Flow</span></div>
+    <div id="topbar-right" style="display:flex;align-items:center;gap:10px"></div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="nav-section">Navigation</div>
+    <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard">
+      <span class="icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('projects')" id="nav-projects">
+      <span class="icon">📁</span> Projects
+    </div>
+    <div class="nav-item" onclick="navigate('my-tasks')" id="nav-my-tasks">
+      <span class="icon">✅</span> My Tasks
+    </div>
+    <div id="admin-nav" style="display:none">
+      <div class="nav-section">Admin</div>
+      <div class="nav-item" onclick="navigate('users')" id="nav-users">
+        <span class="icon">👥</span> Users
+      </div>
+    </div>
+    <div id="projects-nav" style="margin-top:8px"></div>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="main"></main>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════════════════ */
+const API = '/api';
+let state = {
+  token: localStorage.getItem('tf_token'),
+  user: null,
+  projects: [],
+  currentProject: null,
+  currentView: 'dashboard',
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   API HELPERS
+═══════════════════════════════════════════════════════════════════════════ */
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (state.token) opts.headers['Authorization'] = `Bearer ${state.token}`;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+const get = (p) => api('GET', p);
+const post = (p, b) => api('POST', p, b);
+const put = (p, b) => api('PUT', p, b);
+const del = (p) => api('DELETE', p);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════════════════════ */
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════════════════════════ */
+let authTab = 'login';
+
+function switchAuthTab(tab) {
+  authTab = tab;
+  document.querySelectorAll('.auth-tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'signup'));
+  });
+  renderAuthForm();
+}
+
+function renderAuthForm() {
+  const el = document.getElementById('auth-form');
+  if (authTab === 'login') {
+    el.innerHTML = `
+      <div class="form-group"><label class="form-label">Email</label>
+        <input type="email" id="a-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="form-group"><label class="form-label">Password</label>
+        <input type="password" id="a-pass" placeholder="••••••••" autocomplete="current-password"></div>
+      <div id="auth-err" class="form-error" style="margin-bottom:12px"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Sign In</button>
+      <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted)">
+        Demo: admin@demo.com / password123
+      </div>
+    `;
+  } else {
+    el.innerHTML = `
+      <div class="form-group"><label class="form-label">Name</label>
+        <input type="text" id="a-name" placeholder="Your name"></div>
+      <div class="form-group"><label class="form-label">Email</label>
+        <input type="email" id="a-email" placeholder="you@example.com"></div>
+      <div class="form-group"><label class="form-label">Password</label>
+        <input type="password" id="a-pass" placeholder="Min 6 characters"></div>
+      <div id="auth-err" class="form-error" style="margin-bottom:12px"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="doSignup()">Create Account</button>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted)">
+        First registered user becomes Admin
+      </div>
+    `;
+  }
+  // Enter key support
+  el.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => {
+    if (e.key === 'Enter') authTab === 'login' ? doLogin() : doSignup();
+  }));
+}
+
+async function doLogin() {
+  const email = document.getElementById('a-email').value.trim();
+  const pass = document.getElementById('a-pass').value;
+  document.getElementById('auth-err').textContent = '';
+  try {
+    const data = await post('/auth/login', { email, password: pass });
+    state.token = data.token;
+    state.user = data.user;
+    localStorage.setItem('tf_token', data.token);
+    bootApp();
+  } catch (e) {
+    document.getElementById('auth-err').textContent = e.message;
+  }
+}
+
+async function doSignup() {
+  const name = document.getElementById('a-name').value.trim();
+  const email = document.getElementById('a-email').value.trim();
+  const pass = document.getElementById('a-pass').value;
+  document.getElementById('auth-err').textContent = '';
+  try {
+    const data = await post('/auth/signup', { name, email, password: pass });
+    state.token = data.token;
+    state.user = data.user;
+    localStorage.setItem('tf_token', data.token);
+    bootApp();
+  } catch (e) {
+    document.getElementById('auth-err').textContent = e.message;
+  }
+}
+
+function logout() {
+  state.token = null;
+  state.user = null;
+  localStorage.removeItem('tf_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-page').style.display = 'flex';
+  renderAuthForm();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════════════════════════ */
+async function bootApp() {
+  document.getElementById('auth-page').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+
+  // Topbar
+  const u = state.user;
+  document.getElementById('topbar-right').innerHTML = `
+    <div class="topbar-user" onclick="navigate('profile')">
+      ${avatarEl(u, 32)}
+      <span style="font-size:13px;font-weight:500">${u.name}</span>
+      <span class="role-badge ${u.role}">${u.role}</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+  `;
+
+  if (u.role === 'admin') document.getElementById('admin-nav').style.display = 'block';
+
+  await loadProjects();
+  navigate('dashboard');
+}
+
+function avatarEl(user, size = 32) {
+  const colors = ['#7c6aff','#22d3a5','#f59e0b','#f43f5e','#38bdf8'];
+  const color = colors[(user.name.charCodeAt(0) || 0) % colors.length];
+  const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  if (user.avatar) {
+    return `<img src="${user.avatar}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover">`;
+  }
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${color}22;color:${color};font-size:${Math.round(size*0.4)}px">${initials}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════════════════════════════════ */
+function navigate(view, id) {
+  state.currentView = view;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById(`nav-${view}`);
+  if (navEl) navEl.classList.add('active');
+
+  switch (view) {
+    case 'dashboard': renderDashboard(); break;
+    case 'projects': renderProjects(); break;
+    case 'project': renderProject(id); break;
+    case 'my-tasks': renderMyTasks(); break;
+    case 'users': renderUsers(); break;
+    case 'profile': renderProfile(); break;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROJECTS
+═══════════════════════════════════════════════════════════════════════════ */
+async function loadProjects() {
+  try {
+    const data = await get('/projects');
+    state.projects = data.projects;
+    renderProjectsNav();
+  } catch (e) {}
+}
+
+function renderProjectsNav() {
+  const el = document.getElementById('projects-nav');
+  el.innerHTML = `
+    <div class="nav-section">Projects</div>
+    ${state.projects.slice(0, 8).map(p => `
+      <div class="nav-item" id="nav-project-${p.id}" onclick="navigate('project','${p.id}')">
+        <span class="icon">◆</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
+        <span class="count">${p.task_count || 0}</span>
+      </div>
+    `).join('')}
+    <button class="btn nav-item nav-add" onclick="showNewProjectModal()">+ New Project</button>
+  `;
+}
+
+function renderProjects() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">Projects</h1>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="showNewProjectModal()">+ New Project</button>
+      </div>
+    </div>
+    <div class="project-grid" id="project-grid">
+      ${state.projects.length === 0 ? emptyState('📁', 'No projects yet', 'Create your first project to get started') : ''}
+    </div>
+  `;
+  if (state.projects.length > 0) {
+    document.getElementById('project-grid').innerHTML = state.projects.map(p => {
+      const pct = p.task_count > 0 ? Math.round((p.done_count / p.task_count) * 100) : 0;
+      return `
+        <div class="project-card" onclick="navigate('project','${p.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div class="project-card-name">${esc(p.name)}</div>
+            <span class="status-badge ${p.status}" style="margin-top:2px">${p.status}</span>
+          </div>
+          <div class="project-card-desc">${esc(p.description || 'No description')}</div>
+          <div class="project-progress"><div class="project-progress-bar" style="width:${pct}%"></div></div>
+          <div class="project-footer">
+            <span>👥 ${p.member_count} members</span>
+            <span>${p.done_count||0}/${p.task_count||0} tasks</span>
+            <span style="color:var(--accent)">${pct}%</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+async function renderProject(id) {
+  document.getElementById('main').innerHTML = `<div style="color:var(--muted)">Loading...</div>`;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById(`nav-project-${id}`);
+  if (navEl) navEl.classList.add('active');
+
+  try {
+    const [projData, taskData] = await Promise.all([
+      get(`/projects/${id}`),
+      get(`/projects/${id}/tasks`)
+    ]);
+    state.currentProject = { ...projData.project, members: projData.members, tasks: taskData.tasks };
+    renderProjectView();
+  } catch (e) {
+    document.getElementById('main').innerHTML = `<div class="card">Failed to load project: ${e.message}</div>`;
+  }
+}
+
+function renderProjectView(activeTab = 'board') {
+  const p = state.currentProject;
+  const isAdmin = state.user.role === 'admin' || p.members.find(m => m.id === state.user.id && m.role === 'admin');
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="page-header">
+      <button class="btn btn-ghost btn-sm" onclick="navigate('projects')">← Back</button>
+      <div>
+        <h1 class="page-title">${esc(p.name)}</h1>
+        <div style="color:var(--muted);font-size:12px;margin-top:2px">${esc(p.description||'')}</div>
+      </div>
+      <div class="page-actions">
+        ${isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="showProjectSettings()">⚙ Settings</button>` : ''}
+        <button class="btn btn-primary btn-sm" onclick="showNewTaskModal()">+ Task</button>
+      </div>
+    </div>
+    <div class="tab-nav">
+      <button class="tab-btn ${activeTab==='board'?'active':''}" onclick="switchProjectTab('board')">Board</button>
+      <button class="tab-btn ${activeTab==='list'?'active':''}" onclick="switchProjectTab('list')">List</button>
+      <button class="tab-btn ${activeTab==='members'?'active':''}" onclick="switchProjectTab('members')">Members (${p.members.length})</button>
+      <button class="tab-btn ${activeTab==='activity'?'active':''}" onclick="switchProjectTab('activity')">Activity</button>
+    </div>
+    <div id="project-tab-content"></div>
+  `;
+  switchProjectTab(activeTab);
+}
+
+function switchProjectTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn:nth-child(${['board','list','members','activity'].indexOf(tab)+1})`);
+  if (btn) btn.classList.add('active');
+  const content = document.getElementById('project-tab-content');
+  const p = state.currentProject;
+
+  if (tab === 'board') {
+    const cols = [
+      { key: 'todo', label: 'To Do', color: 'var(--muted)' },
+      { key: 'in_progress', label: 'In Progress', color: 'var(--blue)' },
+      { key: 'review', label: 'Review', color: 'var(--amber)' },
+      { key: 'done', label: 'Done', color: 'var(--green)' },
+    ];
+    content.innerHTML = `
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍 Search tasks…" oninput="filterTasks(this.value)" id="task-search" style="max-width:220px">
+        <select onchange="filterTasks()" id="filter-priority">
+          <option value="">All priorities</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select onchange="filterTasks()" id="filter-assignee">
+          <option value="">All assignees</option>
+          <option value="me">Assigned to me</option>
+          ${p.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="kanban" id="kanban-board">
+        ${cols.map(col => `
+          <div class="kanban-col">
+            <div class="kanban-col-header">
+              <div class="dot" style="background:${col.color}"></div>
+              ${col.label}
+              <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)" id="col-count-${col.key}"></span>
+            </div>
+            <div class="kanban-tasks" id="col-${col.key}"></div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    renderKanban(p.tasks);
+  } else if (tab === 'list') {
+    content.innerHTML = `
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍 Search tasks…" oninput="filterTasksList(this.value)" id="task-search-list" style="max-width:220px">
+        <select onchange="filterTasksList()" id="filter-status-list">
+          <option value="">All statuses</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="review">Review</option>
+          <option value="done">Done</option>
+        </select>
+        <select onchange="filterTasksList()" id="filter-priority-list">
+          <option value="">All priorities</option>
+          <option value="urgent">Urgent</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div id="task-list-content"></div>
+    `;
+    renderTaskList(p.tasks);
+  } else if (tab === 'members') {
+    const isAdmin = state.user.role === 'admin' || p.members.find(m => m.id === state.user.id && m.role === 'admin');
+    content.innerHTML = `
+      <div class="card" style="max-width:600px">
+        ${isAdmin ? `
+          <div style="display:flex;gap:10px;margin-bottom:20px">
+            <input type="email" id="invite-email" placeholder="member@email.com" style="flex:1">
+            <select id="invite-role" style="width:auto">
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="addMember()">Add Member</button>
+          </div>
+        ` : ''}
+        <div id="members-list">
+          ${p.members.map(m => `
+            <div class="member-row">
+              ${avatarEl(m, 36)}
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:13px">${esc(m.name)}</div>
+                <div style="color:var(--muted);font-size:11px;font-family:var(--mono)">${esc(m.email)}</div>
+              </div>
+              <span class="role-badge ${m.role}">${m.role}</span>
+              ${isAdmin && m.id !== p.owner_id ? `
+                <button class="btn btn-ghost btn-sm" onclick="changeMemberRole(${m.id},'${m.role === 'admin' ? 'member' : 'admin'}')">
+                  Make ${m.role === 'admin' ? 'Member' : 'Admin'}
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="removeMember(${m.id})">Remove</button>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (tab === 'activity') {
+    content.innerHTML = `<div class="card" style="max-width:600px" id="activity-container"><div style="color:var(--muted)">Loading…</div></div>`;
+    get(`/projects/${p.id}/activity`).then(data => {
+      document.getElementById('activity-container').innerHTML = data.activity.length === 0
+        ? emptyState('📋', 'No activity yet', '')
+        : data.activity.map(a => `
+          <div class="activity-item">
+            <div class="activity-dot"></div>
+            <div style="flex:1">
+              <span style="font-weight:500">${esc(a.user_name||'System')}</span>
+              <span style="color:var(--muted)"> ${formatAction(a.action)} ${a.task_title ? `<em>${esc(a.task_title)}</em>` : ''}</span>
+            </div>
+            <div class="activity-time">${timeAgo(a.created_at)}</div>
+          </div>
+        `).join('');
+    });
+  }
+}
+
+function renderKanban(tasks) {
+  ['todo','in_progress','review','done'].forEach(status => {
+    const col = document.getElementById(`col-${status}`);
+    const count = document.getElementById(`col-count-${status}`);
+    if (!col) return;
+    const filtered = tasks.filter(t => t.status === status);
+    if (count) count.textContent = filtered.length;
+    col.innerHTML = filtered.length === 0
+      ? `<div style="color:var(--muted);font-size:11px;text-align:center;padding:20px 0">No tasks</div>`
+      : filtered.map(t => `
+        <div class="kanban-task" onclick="showTaskModal(${t.id})">
+          <div class="kanban-task-title">${esc(t.title)}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="priority ${t.priority}">${t.priority}</span>
+            ${t.due_date ? `<span style="font-family:var(--mono);font-size:10px;color:${isOverdue(t.due_date) && t.status!=='done' ? 'var(--red)' : 'var(--muted)'}">${fmt(t.due_date)}</span>` : ''}
+          </div>
+          ${t.assignee_name ? `<div style="display:flex;align-items:center;gap:6px;margin-top:8px">${avatarEl({name:t.assignee_name,avatar:t.assignee_avatar},20)}<span style="font-size:11px;color:var(--muted)">${esc(t.assignee_name)}</span></div>` : ''}
+        </div>
+      `).join('');
+  });
+}
+
+function renderTaskList(tasks) {
+  const el = document.getElementById('task-list-content');
+  if (!el) return;
+  if (tasks.length === 0) { el.innerHTML = emptyState('✅', 'No tasks', 'Create a task to get started'); return; }
+  el.innerHTML = `<div class="task-grid">
+    ${tasks.map(t => `
+      <div class="task-card ${isOverdue(t.due_date) && t.status !== 'done' ? 'overdue' : ''}" onclick="showTaskModal(${t.id})">
+        <div style="flex:1">
+          <div style="font-weight:500;margin-bottom:4px">${esc(t.title)}</div>
+          <div class="task-meta">
+            <span class="status-badge ${t.status}">${t.status.replace('_',' ')}</span>
+            <span class="priority ${t.priority}">${t.priority}</span>
+            ${t.assignee_name ? `<span style="font-size:11px;color:var(--muted)">@${esc(t.assignee_name)}</span>` : ''}
+            ${t.due_date ? `<span style="font-family:var(--mono);font-size:10px;color:${isOverdue(t.due_date)&&t.status!=='done'?'var(--red)':'var(--muted)'}">📅 ${fmt(t.due_date)}</span>` : ''}
+            ${t.comment_count > 0 ? `<span style="font-size:10px;color:var(--muted)">💬 ${t.comment_count}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function filterTasks(searchVal) {
+  const search = (document.getElementById('task-search')?.value || searchVal || '').toLowerCase();
+  const priority = document.getElementById('filter-priority')?.value;
+  const assigneeVal = document.getElementById('filter-assignee')?.value;
+  let tasks = state.currentProject.tasks;
+  if (search) tasks = tasks.filter(t => t.title.toLowerCase().includes(search) || (t.description||'').toLowerCase().includes(search));
+  if (priority) tasks = tasks.filter(t => t.priority === priority);
+  if (assigneeVal === 'me') tasks = tasks.filter(t => t.assignee_id === state.user.id);
+  else if (assigneeVal) tasks = tasks.filter(t => t.assignee_id == assigneeVal);
+  renderKanban(tasks);
+}
+
+function filterTasksList() {
+  const search = (document.getElementById('task-search-list')?.value || '').toLowerCase();
+  const status = document.getElementById('filter-status-list')?.value;
+  const priority = document.getElementById('filter-priority-list')?.value;
+  let tasks = state.currentProject.tasks;
+  if (search) tasks = tasks.filter(t => t.title.toLowerCase().includes(search));
+  if (status) tasks = tasks.filter(t => t.status === status);
+  if (priority) tasks = tasks.filter(t => t.priority === priority);
+  renderTaskList(tasks);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════════════════════════ */
+async function renderDashboard() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div style="color:var(--muted)">Loading dashboard…</div>`;
+  try {
+    const d = await get('/dashboard');
+    main.innerHTML = `
+      <div class="page-header">
+        <h1 class="page-title">Welcome back, ${esc(state.user.name.split(' ')[0])} 👋</h1>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-value">${d.stats.total_projects}</div><div class="stat-label">Projects</div></div>
+        <div class="stat-card green"><div class="stat-value">${d.stats.completed_tasks}</div><div class="stat-label">Completed</div></div>
+        <div class="stat-card purple"><div class="stat-value">${d.stats.my_tasks}</div><div class="stat-label">My Tasks</div></div>
+        <div class="stat-card amber"><div class="stat-value">${d.stats.in_progress_tasks}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card red"><div class="stat-value">${d.stats.overdue_tasks}</div><div class="stat-label">Overdue</div></div>
+        <div class="stat-card blue"><div class="stat-value">${d.stats.total_tasks}</div><div class="stat-label">Total Tasks</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div style="font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:14px">My Upcoming Tasks</div>
+          ${d.myTasks.length === 0 ? '<div style="color:var(--muted);font-size:12px">No open tasks</div>' : d.myTasks.map(t => `
+            <div class="task-card" style="padding:10px" onclick="navigate('project','${t.project_id}')">
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:500">${esc(t.title)}</div>
+                <div class="task-meta" style="margin-top:4px">
+                  <span class="priority ${t.priority}" style="font-size:9px">${t.priority}</span>
+                  <span style="font-size:10px;color:var(--accent)">${esc(t.project_name)}</span>
+                  ${t.due_date ? `<span style="font-size:10px;color:${isOverdue(t.due_date)?'var(--red)':'var(--muted)'}">${fmt(t.due_date)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="card">
+          <div style="font-family:var(--display);font-weight:700;font-size:15px;margin-bottom:14px">Recent Activity</div>
+          ${d.recentActivity.length === 0 ? '<div style="color:var(--muted);font-size:12px">No recent activity</div>' : d.recentActivity.slice(0,8).map(a => `
+            <div class="activity-item">
+              <div class="activity-dot"></div>
+              <div style="flex:1;font-size:11px">
+                <span style="font-weight:500">${esc(a.user_name||'?')}</span>
+                <span style="color:var(--muted)"> ${formatAction(a.action)}</span>
+                ${a.project_name ? `<span style="color:var(--accent)"> ${esc(a.project_name)}</span>` : ''}
+              </div>
+              <div class="activity-time">${timeAgo(a.created_at)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } catch (e) { main.innerHTML = `<div class="card">Error: ${e.message}</div>`; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MY TASKS
+═══════════════════════════════════════════════════════════════════════════ */
+async function renderMyTasks() {
+  const main = document.getElementById('main');
+  main.innerHTML = `<div style="color:var(--muted)">Loading…</div>`;
+  // Collect all tasks assigned to me across all projects
+  const tasks = [];
+  for (const p of state.projects) {
+    try {
+      const data = await get(`/projects/${p.id}/tasks?assignee=me`);
+      data.tasks.forEach(t => tasks.push({ ...t, project_name: p.name }));
+    } catch (e) {}
+  }
+  main.innerHTML = `
+    <div class="page-header"><h1 class="page-title">My Tasks</h1></div>
+    <div class="task-grid">
+      ${tasks.length === 0 ? emptyState('✅', 'No tasks assigned to you', 'Tasks assigned to you will appear here') : tasks.map(t => `
+        <div class="task-card ${isOverdue(t.due_date)&&t.status!=='done'?'overdue':''}" onclick="navigate('project','${t.project_id}')">
+          <div style="flex:1">
+            <div style="font-weight:500;margin-bottom:4px">${esc(t.title)}</div>
+            <div class="task-meta">
+              <span class="status-badge ${t.status}">${t.status.replace('_',' ')}</span>
+              <span class="priority ${t.priority}">${t.priority}</span>
+              <span style="font-size:11px;color:var(--accent)">${esc(t.project_name)}</span>
+              ${t.due_date ? `<span style="font-size:10px;color:${isOverdue(t.due_date)&&t.status!=='done'?'var(--red)':'var(--muted)'}">📅 ${fmt(t.due_date)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   USERS (Admin)
+═══════════════════════════════════════════════════════════════════════════ */
+async function renderUsers() {
+  if (state.user.role !== 'admin') return;
+  const main = document.getElementById('main');
+  main.innerHTML = `<div style="color:var(--muted)">Loading…</div>`;
+  try {
+    const data = await get('/users');
+    main.innerHTML = `
+      <div class="page-header"><h1 class="page-title">Users</h1></div>
+      <div class="card" style="max-width:700px">
+        ${data.users.map(u => `
+          <div class="member-row">
+            ${avatarEl(u, 36)}
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:13px">${esc(u.name)}</div>
+              <div style="color:var(--muted);font-size:11px;font-family:var(--mono)">${esc(u.email)}</div>
+            </div>
+            <span class="role-badge ${u.role}">${u.role}</span>
+            <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${fmt(u.created_at)}</span>
+            ${u.id !== state.user.id ? `
+              <button class="btn btn-ghost btn-sm" onclick="changeUserRole(${u.id},'${u.role==='admin'?'member':'admin'}')">
+                Make ${u.role==='admin'?'Member':'Admin'}
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Delete</button>
+            ` : `<span class="role-badge" style="background:var(--border);color:var(--muted)">You</span>`}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch (e) { main.innerHTML = `<div class="card">Error: ${e.message}</div>`; }
+}
+
+async function changeUserRole(id, role) {
+  try {
+    await put(`/users/${id}/role`, { role });
+    toast('Role updated', 'success');
+    renderUsers();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteUser(id) {
+  if (!confirm('Delete this user? This cannot be undone.')) return;
+  try {
+    await del(`/users/${id}`);
+    toast('User deleted', 'success');
+    renderUsers();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROFILE
+═══════════════════════════════════════════════════════════════════════════ */
+function renderProfile() {
+  const u = state.user;
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="page-header"><h1 class="page-title">Profile</h1></div>
+    <div class="card" style="max-width:480px">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+        ${avatarEl(u, 64)}
+        <div>
+          <div style="font-family:var(--display);font-size:20px;font-weight:700">${esc(u.name)}</div>
+          <div style="color:var(--muted);font-size:12px;font-family:var(--mono)">${esc(u.email)}</div>
+          <span class="role-badge ${u.role}" style="margin-top:4px;display:inline-block">${u.role}</span>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Display Name</label>
+        <input type="text" id="p-name" value="${esc(u.name)}"></div>
+      <div class="form-group"><label class="form-label">Current Password</label>
+        <input type="password" id="p-curr-pass" placeholder="Required to change password"></div>
+      <div class="form-group"><label class="form-label">New Password</label>
+        <input type="password" id="p-new-pass" placeholder="Min 6 characters"></div>
+      <div id="profile-err" class="form-error" style="margin-bottom:10px"></div>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+    </div>
+  `;
+}
+
+async function saveProfile() {
+  const name = document.getElementById('p-name').value.trim();
+  const currentPassword = document.getElementById('p-curr-pass').value;
+  const newPassword = document.getElementById('p-new-pass').value;
+  document.getElementById('profile-err').textContent = '';
+  try {
+    const body = { name };
+    if (newPassword) { body.currentPassword = currentPassword; body.newPassword = newPassword; }
+    const data = await put('/auth/profile', body);
+    state.user = data.user;
+    toast('Profile updated!', 'success');
+    renderProfile();
+    // Refresh topbar
+    document.getElementById('topbar-right').querySelector('span').textContent = data.user.name;
+  } catch (e) { document.getElementById('profile-err').textContent = e.message; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODALS
+═══════════════════════════════════════════════════════════════════════════ */
+function showModal(html) {
+  closeModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modal-overlay';
+  overlay.innerHTML = html;
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+
+function closeModal() {
+  const el = document.getElementById('modal-overlay');
+  if (el) el.remove();
+}
+
+/* ── New Project Modal ─────────────────────────────────────────────────── */
+function showNewProjectModal() {
+  showModal(`
+    <div class="modal">
+      <div class="modal-header"><h2 class="modal-title">New Project</h2></div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Project Name *</label>
+          <input type="text" id="proj-name" placeholder="My Awesome Project"></div>
+        <div class="form-group"><label class="form-label">Description</label>
+          <textarea id="proj-desc" placeholder="What is this project about?"></textarea></div>
+        <div id="proj-err" class="form-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="createProject()">Create Project</button>
+      </div>
+    </div>
+  `);
+  document.getElementById('proj-name').focus();
+}
+
+async function createProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  const description = document.getElementById('proj-desc').value.trim();
+  document.getElementById('proj-err').textContent = '';
+  try {
+    await post('/projects', { name, description });
+    await loadProjects();
+    closeModal();
+    toast('Project created!', 'success');
+    renderProjects();
+  } catch (e) { document.getElementById('proj-err').textContent = e.message; }
+}
+
+/* ── Project Settings Modal ───────────────────────────────────────────── */
+function showProjectSettings() {
+  const p = state.currentProject;
+  showModal(`
+    <div class="modal">
+      <div class="modal-header"><h2 class="modal-title">Project Settings</h2></div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Project Name</label>
+          <input type="text" id="ps-name" value="${esc(p.name)}"></div>
+        <div class="form-group"><label class="form-label">Description</label>
+          <textarea id="ps-desc">${esc(p.description||'')}</textarea></div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select id="ps-status">
+            <option value="active" ${p.status==='active'?'selected':''}>Active</option>
+            <option value="completed" ${p.status==='completed'?'selected':''}>Completed</option>
+            <option value="archived" ${p.status==='archived'?'selected':''}>Archived</option>
+          </select>
+        </div>
+        <div id="ps-err" class="form-error"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+        <div style="color:var(--red);font-size:13px;font-weight:600;margin-bottom:8px">Danger Zone</div>
+        <button class="btn btn-danger btn-sm" onclick="deleteProject()">Delete Project</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="updateProject()">Save Changes</button>
+      </div>
+    </div>
+  `);
+}
+
+async function updateProject() {
+  const name = document.getElementById('ps-name').value.trim();
+  const description = document.getElementById('ps-desc').value.trim();
+  const status = document.getElementById('ps-status').value;
+  try {
+    const data = await put(`/projects/${state.currentProject.id}`, { name, description, status });
+    state.currentProject = { ...state.currentProject, ...data.project };
+    await loadProjects();
+    closeModal();
+    toast('Project updated!', 'success');
+    renderProjectView();
+  } catch (e) { document.getElementById('ps-err').textContent = e.message; }
+}
+
+async function deleteProject() {
+  if (!confirm('Delete this project and all its tasks? This cannot be undone.')) return;
+  try {
+    await del(`/projects/${state.currentProject.id}`);
+    await loadProjects();
+    closeModal();
+    toast('Project deleted', 'info');
+    navigate('projects');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ── New Task Modal ───────────────────────────────────────────────────── */
+function showNewTaskModal() {
+  const p = state.currentProject;
+  showModal(`
+    <div class="modal modal-wide">
+      <div class="modal-header"><h2 class="modal-title">New Task</h2></div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Task Title *</label>
+          <input type="text" id="tk-title" placeholder="Describe the task clearly"></div>
+        <div class="form-group"><label class="form-label">Description</label>
+          <textarea id="tk-desc" placeholder="More details, acceptance criteria, links…" style="min-height:100px"></textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Priority</label>
+            <select id="tk-priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Status</label>
+            <select id="tk-status">
+              <option value="todo" selected>To Do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Assignee</label>
+            <select id="tk-assignee">
+              <option value="">Unassigned</option>
+              ${p.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Due Date</label>
+            <input type="date" id="tk-due"></div>
+        </div>
+        <div id="tk-err" class="form-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="createTask()">Create Task</button>
+      </div>
+    </div>
+  `);
+  document.getElementById('tk-title').focus();
+}
+
+async function createTask() {
+  const title = document.getElementById('tk-title').value.trim();
+  const description = document.getElementById('tk-desc').value.trim();
+  const priority = document.getElementById('tk-priority').value;
+  const status = document.getElementById('tk-status').value;
+  const assignee_id = document.getElementById('tk-assignee').value || null;
+  const due_date = document.getElementById('tk-due').value || null;
+  document.getElementById('tk-err').textContent = '';
+  try {
+    await post(`/projects/${state.currentProject.id}/tasks`, { title, description, priority, status, assignee_id, due_date });
+    const data = await get(`/projects/${state.currentProject.id}/tasks`);
+    state.currentProject.tasks = data.tasks;
+    closeModal();
+    toast('Task created!', 'success');
+    renderProjectView(document.querySelector('.tab-btn.active')?.textContent.toLowerCase() === 'list' ? 'list' : 'board');
+  } catch (e) { document.getElementById('tk-err').textContent = e.message; }
+}
+
+/* ── Task Detail Modal ────────────────────────────────────────────────── */
+async function showTaskModal(taskId) {
+  const p = state.currentProject;
+  const task = p.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  showModal(`
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="status-badge ${task.status}">${task.status.replace('_',' ')}</span>
+            <span class="priority ${task.priority}">${task.priority}</span>
+          </div>
+          <h2 class="modal-title" id="task-modal-title">${esc(task.title)}</h2>
+        </div>
+        <button class="btn btn-icon" onclick="closeModal()" style="font-size:18px;flex-shrink:0">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row" style="margin-bottom:16px">
+          <div>
+            <div class="form-label">Status</div>
+            <select id="td-status" onchange="quickUpdateTask(${taskId},'status',this.value)">
+              <option value="todo" ${task.status==='todo'?'selected':''}>To Do</option>
+              <option value="in_progress" ${task.status==='in_progress'?'selected':''}>In Progress</option>
+              <option value="review" ${task.status==='review'?'selected':''}>Review</option>
+              <option value="done" ${task.status==='done'?'selected':''}>Done</option>
+            </select>
+          </div>
+          <div>
+            <div class="form-label">Priority</div>
+            <select id="td-priority" onchange="quickUpdateTask(${taskId},'priority',this.value)">
+              <option value="low" ${task.priority==='low'?'selected':''}>Low</option>
+              <option value="medium" ${task.priority==='medium'?'selected':''}>Medium</option>
+              <option value="high" ${task.priority==='high'?'selected':''}>High</option>
+              <option value="urgent" ${task.priority==='urgent'?'selected':''}>Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:16px">
+          <div>
+            <div class="form-label">Assignee</div>
+            <select id="td-assignee" onchange="quickUpdateTask(${taskId},'assignee_id',this.value||null)">
+              <option value="">Unassigned</option>
+              ${p.members.map(m => `<option value="${m.id}" ${task.assignee_id==m.id?'selected':''}>${esc(m.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <div class="form-label">Due Date</div>
+            <input type="date" id="td-due" value="${task.due_date||''}" onchange="quickUpdateTask(${taskId},'due_date',this.value||null)">
+          </div>
+        </div>
+        ${task.description ? `<div style="background:var(--panel);border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text)">${esc(task.description)}</div>` : ''}
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-ghost btn-sm" onclick="showEditTaskModal(${taskId})">✏ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTask(${taskId})">🗑 Delete</button>
+        </div>
+        <div style="font-family:var(--display);font-size:14px;font-weight:700;margin-bottom:12px">Comments</div>
+        <div id="comments-list"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <input type="text" id="new-comment" placeholder="Add a comment…" style="flex:1">
+          <button class="btn btn-primary btn-sm" onclick="addComment(${taskId})">Send</button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  document.getElementById('new-comment').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addComment(taskId);
+  });
+
+  loadComments(taskId);
+}
+
+async function loadComments(taskId) {
+  try {
+    const data = await get(`/projects/${state.currentProject.id}/tasks/${taskId}`);
+    const el = document.getElementById('comments-list');
+    if (!el) return;
+    el.innerHTML = data.comments.length === 0
+      ? '<div style="color:var(--muted);font-size:12px">No comments yet</div>'
+      : data.comments.map(c => `
+        <div class="comment">
+          ${avatarEl({ name: c.user_name, avatar: c.avatar }, 28)}
+          <div class="comment-body">
+            <div class="comment-meta">
+              <span class="comment-author">${esc(c.user_name)}</span>
+              <span class="comment-time">${timeAgo(c.created_at)}</span>
+              ${c.user_id === state.user.id ? `<button class="btn btn-icon" style="font-size:10px;padding:2px 6px;margin-left:auto" onclick="deleteComment(${taskId},${c.id})">✕</button>` : ''}
+            </div>
+            <div style="font-size:13px">${esc(c.content)}</div>
+          </div>
+        </div>
+      `).join('');
+  } catch (e) {}
+}
+
+async function addComment(taskId) {
+  const input = document.getElementById('new-comment');
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    await post(`/projects/${state.currentProject.id}/tasks/${taskId}/comments`, { content });
+    input.value = '';
+    loadComments(taskId);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteComment(taskId, commentId) {
+  try {
+    await del(`/projects/${state.currentProject.id}/tasks/${taskId}/comments/${commentId}`);
+    loadComments(taskId);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function quickUpdateTask(taskId, field, value) {
+  try {
+    const data = await put(`/projects/${state.currentProject.id}/tasks/${taskId}`, { [field]: value });
+    // Update local state
+    const idx = state.currentProject.tasks.findIndex(t => t.id === taskId);
+    if (idx !== -1) state.currentProject.tasks[idx] = data.task;
+    toast('Updated!', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function showEditTaskModal(taskId) {
+  const p = state.currentProject;
+  const task = p.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  closeModal();
+  showModal(`
+    <div class="modal modal-wide">
+      <div class="modal-header"><h2 class="modal-title">Edit Task</h2></div>
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Title *</label>
+          <input type="text" id="et-title" value="${esc(task.title)}"></div>
+        <div class="form-group"><label class="form-label">Description</label>
+          <textarea id="et-desc" style="min-height:100px">${esc(task.description||'')}</textarea></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Priority</label>
+            <select id="et-priority">
+              ${['low','medium','high','urgent'].map(v => `<option value="${v}" ${task.priority===v?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Status</label>
+            <select id="et-status">
+              ${['todo','in_progress','review','done'].map(v => `<option value="${v}" ${task.status===v?'selected':''}>${v.replace('_',' ')}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Assignee</label>
+            <select id="et-assignee">
+              <option value="">Unassigned</option>
+              ${p.members.map(m => `<option value="${m.id}" ${task.assignee_id==m.id?'selected':''}>${esc(m.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Due Date</label>
+            <input type="date" id="et-due" value="${task.due_date||''}"></div>
+        </div>
+        <div id="et-err" class="form-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditTask(${taskId})">Save</button>
+      </div>
+    </div>
+  `);
+}
+
+async function saveEditTask(taskId) {
+  const body = {
+    title: document.getElementById('et-title').value.trim(),
+    description: document.getElementById('et-desc').value.trim(),
+    priority: document.getElementById('et-priority').value,
+    status: document.getElementById('et-status').value,
+    assignee_id: document.getElementById('et-assignee').value || null,
+    due_date: document.getElementById('et-due').value || null,
+  };
+  try {
+    const data = await put(`/projects/${state.currentProject.id}/tasks/${taskId}`, body);
+    const idx = state.currentProject.tasks.findIndex(t => t.id === taskId);
+    if (idx !== -1) state.currentProject.tasks[idx] = data.task;
+    closeModal();
+    toast('Task updated!', 'success');
+    renderProjectView(document.querySelector('.tab-btn.active')?.textContent.toLowerCase().includes('list') ? 'list' : 'board');
+  } catch (e) { document.getElementById('et-err').textContent = e.message; }
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Delete this task?')) return;
+  try {
+    await del(`/projects/${state.currentProject.id}/tasks/${taskId}`);
+    state.currentProject.tasks = state.currentProject.tasks.filter(t => t.id !== taskId);
+    closeModal();
+    toast('Task deleted', 'info');
+    renderProjectView('board');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ── Members ─────────────────────────────────────────────────────────── */
+async function addMember() {
+  const email = document.getElementById('invite-email').value.trim();
+  const role = document.getElementById('invite-role').value;
+  try {
+    await post(`/projects/${state.currentProject.id}/members`, { email, role });
+    // Reload project
+    const projData = await get(`/projects/${state.currentProject.id}`);
+    state.currentProject.members = projData.members;
+    toast('Member added!', 'success');
+    switchProjectTab('members');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function removeMember(userId) {
+  if (!confirm('Remove this member?')) return;
+  try {
+    await del(`/projects/${state.currentProject.id}/members/${userId}`);
+    const projData = await get(`/projects/${state.currentProject.id}`);
+    state.currentProject.members = projData.members;
+    toast('Member removed', 'info');
+    switchProjectTab('members');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function changeMemberRole(userId, newRole) {
+  try {
+    await put(`/projects/${state.currentProject.id}/members/${userId}`, { role: newRole });
+    const projData = await get(`/projects/${state.currentProject.id}`);
+    state.currentProject.members = projData.members;
+    toast('Role updated', 'success');
+    switchProjectTab('members');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════════════════════════ */
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmt(dateStr) {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr + (dateStr.includes('Z') ? '' : 'Z')).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  if (d < 30) return `${d}d ago`;
+  return fmt(dateStr);
+}
+
+function isOverdue(dateStr) {
+  if (!dateStr) return false;
+  return new Date(dateStr) < new Date(new Date().toDateString());
+}
+
+function emptyState(icon, title, sub) {
+  return `<div class="empty"><span class="empty-icon">${icon}</span><div class="empty-title">${title}</div>${sub ? `<div style="font-size:12px">${sub}</div>` : ''}</div>`;
+}
+
+function formatAction(action) {
+  const map = {
+    project_created: 'created project',
+    project_updated: 'updated project',
+    task_created: 'created task',
+    task_updated: 'updated task',
+    task_deleted: 'deleted task',
+    task_status_changed: 'changed status of',
+    member_added: 'added a member to',
+    comment_added: 'commented on',
+  };
+  return map[action] || action;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════════════════ */
+renderAuthForm();
+
+if (state.token) {
+  get('/auth/me').then(data => {
+    state.user = data.user;
+    bootApp();
+  }).catch(() => {
+    localStorage.removeItem('tf_token');
+    state.token = null;
+  });
+}
+</script>
+</body>
+</html>
